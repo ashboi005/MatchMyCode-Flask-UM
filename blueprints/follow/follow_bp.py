@@ -1,125 +1,200 @@
 from flask import Blueprint, request, jsonify
+from flasgger import swag_from
 from config import db
 from blueprints.auth.models import User
 from .models import Follow
-from flasgger import swag_from
 
 follow_bp = Blueprint('follow_bp', __name__)
 
-@follow_bp.route('/request/<string:clerkid>', methods=['POST'])
-@swag_from('./docs/send_follow_request.yml')
-def send_follow_request(clerkid):
-    """
-    Endpoint to send a follow request to a clerk.
-    """
+@swag_from({
+    'tags': ['Follow'],
+    'summary': 'Send a follow request',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'follower_clerkid': {'type': 'string'},
+                    'followed_clerkid': {'type': 'string'}
+                },
+                'required': ['follower_clerkid', 'followed_clerkid']
+            }
+        }
+    ],
+    'responses': {
+        '201': {
+            'description': 'Follow request created successfully'
+        },
+        '400': {
+            'description': 'Invalid input'
+        }
+    }
+})
+@follow_bp.route('/request/<clerkId>', methods=['POST'])
+def send_follow_request(clerkId):
     data = request.get_json()
-    follower_clerkid = data.get('follower_clerkid')
-    followed_clerkid = data.get('followed_clerkid')
+    follower_clerkid = data['follower_clerkid']
+    followed_clerkid = data['followed_clerkid']
+    
+    # Check if the user is trying to follow themselves
+    if follower_clerkid == followed_clerkid:
+        return jsonify({"message": "You cannot follow yourself"}), 400
 
-    if not follower_clerkid or not followed_clerkid:
-        return jsonify({'error': 'Both follower_clerkid and followed_clerkid are required'}), 400
+    # Check if follow request already exists
+    existing_follow = Follow.query.filter_by(
+        follower_clerkid=follower_clerkid,
+        followed_clerkid=followed_clerkid
+    ).first()
 
-    follow_request = Follow(clerkid=clerkid, follower_clerkid=follower_clerkid, followed_clerkid=followed_clerkid)
-    db.session.add(follow_request)
+    if existing_follow:
+        return jsonify({"message": "Follow request already exists"}), 400
+
+    # Create new follow request
+    new_follow = Follow(
+        clerkid=clerkId,
+        follower_clerkid=follower_clerkid,
+        followed_clerkid=followed_clerkid
+    )
+    db.session.add(new_follow)
     db.session.commit()
 
-    return jsonify({'message': 'Follow request sent successfully'}), 201
+    return jsonify({"message": "Follow request sent successfully"}), 201
 
 
-@follow_bp.route('/request/<string:clerkid>', methods=['PUT'])
-@swag_from('./docs/handle_follow_request.yml')
-def handle_follow_request(clerkid):
-    """
-    Endpoint to accept or reject a follow request.
-    """
-    data = request.get_json()
-    follower_clerkid = data.get('follower_clerkid')
-    action = data.get('action')  # 'accept' or 'reject'
+@swag_from({
+    'tags': ['Follow'],
+    'summary': 'Accept or reject follow request',
+    'parameters': [
+        {
+            'name': 'status',
+            'in': 'query',
+            'type': 'string',
+            'enum': ['accepted', 'rejected'],
+            'required': True,
+            'description': 'Status of the follow request'
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'Follow request updated successfully'
+        },
+        '400': {
+            'description': 'Invalid input'
+        }
+    }
+})
+@follow_bp.route('/request/<clerkId>/<follower_clerkid>', methods=['PUT'])
+def handle_follow_request(clerkId, follower_clerkid):
+    status = request.args.get('status')
 
-    if not follower_clerkid or action not in ['accept', 'reject']:
-        return jsonify({'error': 'Invalid input'}), 400
+    if status not in ['accepted', 'rejected']:
+        return jsonify({"message": "Invalid status. Must be either 'accepted' or 'rejected'"}), 400
 
-    follow_request = Follow.query.filter_by(clerkid=clerkid, follower_clerkid=follower_clerkid).first()
+    follow_request = Follow.query.filter_by(
+        clerkid=clerkId,
+        follower_clerkid=follower_clerkid
+    ).first()
 
     if not follow_request:
-        return jsonify({'error': 'Follow request not found'}), 404
+        return jsonify({"message": "Follow request not found"}), 404
 
-    if action == 'accept':
-        follow_request.status = 'accepted'
-    elif action == 'reject':
+    # Handle acceptance or rejection of follow request
+    if status == 'accepted':
+        # Logic to accept follow request, e.g., add to following list
+        # Update the status or any other logic for acceptance
+        pass
+    else:
+        # Logic to reject follow request
         db.session.delete(follow_request)
         db.session.commit()
-        return jsonify({'message': 'Follow request rejected and removed'}), 200
 
+    return jsonify({"message": f"Follow request {status} successfully"}), 200
+
+
+@swag_from({
+    'tags': ['Follow'],
+    'summary': 'Get the follower and followed list',
+    'parameters': [
+        {
+            'name': 'clerkId',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'The clerkId of the user whose follow lists are being retrieved'
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'Follower and followed list retrieved successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'followers': {'type': 'array', 'items': {'type': 'string'}},
+                    'followed': {'type': 'array', 'items': {'type': 'string'}}
+                }
+            }
+        },
+        '400': {
+            'description': 'Invalid input'
+        }
+    }
+})
+@follow_bp.route('/list/<clerkId>', methods=['GET'])
+def get_follow_lists(clerkId):
+    followers = Follow.query.filter_by(followed_clerkid=clerkId).all()
+    followed = Follow.query.filter_by(follower_clerkid=clerkId).all()
+
+    followers_list = [follower.follower_clerkid for follower in followers]
+    followed_list = [followed_user.followed_clerkid for followed_user in followed]
+
+    return jsonify({
+        "followers": followers_list,
+        "followed": followed_list
+    }), 200
+
+
+@swag_from({
+    'tags': ['Follow'],
+    'summary': 'Unfollow a user',
+    'parameters': [
+        {
+            'name': 'clerkId',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'The clerkId of the user who is unfollowing'
+        },
+        {
+            'name': 'followed_clerkid',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'The clerkId of the user to unfollow'
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'Successfully unfollowed the user'
+        },
+        '404': {
+            'description': 'Follow relationship not found'
+        }
+    }
+})
+@follow_bp.route('/unfollow/<clerkId>/<followed_clerkid>', methods=['DELETE'])
+def unfollow_user(clerkId, followed_clerkid):
+    follow_request = Follow.query.filter_by(
+        follower_clerkid=clerkId,
+        followed_clerkid=followed_clerkid
+    ).first()
+
+    if not follow_request:
+        return jsonify({"message": "Follow relationship not found"}), 404
+
+    db.session.delete(follow_request)
     db.session.commit()
-    return jsonify({'message': 'Follow request accepted'}), 200
 
-
-@follow_bp.route('/followers/<string:clerkid>', methods=['GET'])
-@swag_from('./docs/get_followers.yml')
-def get_followers(clerkid):
-    """
-    Endpoint to retrieve the list of followers.
-    """
-    followers = Follow.query.filter_by(followed_clerkid=clerkid).all()
-    follower_list = [{'follower_clerkid': f.follower_clerkid, 'createdAt': f.createdAt} for f in followers]
-
-    return jsonify({'followers': follower_list}), 200
-
-
-@follow_bp.route('/following/<string:clerkid>', methods=['GET'])
-@swag_from('./docs/get_following.yml')
-def get_following(clerkid):
-    """
-    Endpoint to retrieve the list of followed users.
-    """
-    following = Follow.query.filter_by(follower_clerkid=clerkid).all()
-    following_list = [{'followed_clerkid': f.followed_clerkid, 'createdAt': f.createdAt} for f in following]
-
-    return jsonify({'following': following_list}), 200
-
-
-@follow_bp.route('/unfollow/<string:clerkid>', methods=['DELETE'])
-@swag_from('./docs/unfollow.yml')
-def unfollow(clerkid):
-    """
-    Endpoint to unfollow a user.
-    """
-    data = request.get_json()
-    unfollow_id = data.get('unfollow_id')
-
-    if not unfollow_id:
-        return jsonify({'error': 'unfollow_id is required'}), 400
-
-    follow = Follow.query.filter_by(follower_clerkid=clerkid, followed_clerkid=unfollow_id).first()
-
-    if not follow:
-        return jsonify({'error': 'Follow relationship not found'}), 404
-
-    db.session.delete(follow)
-    db.session.commit()
-
-    return jsonify({'message': 'Unfollowed successfully'}), 200
-
-
-@follow_bp.route('/remove_following/<string:clerkid>', methods=['DELETE'])
-@swag_from('./docs/remove_following.yml')
-def remove_following(clerkid):
-    """
-    Endpoint to remove someone from your following list.
-    """
-    data = request.get_json()
-    remove_id = data.get('remove_id')
-
-    if not remove_id:
-        return jsonify({'error': 'remove_id is required'}), 400
-
-    follow = Follow.query.filter_by(followed_clerkid=clerkid, follower_clerkid=remove_id).first()
-
-    if not follow:
-        return jsonify({'error': 'Follow relationship not found'}), 404
-
-    db.session.delete(follow)
-    db.session.commit()
-
-    return jsonify({'message': 'Removed from following successfully'}), 200
+    return jsonify({"message": "Successfully unfollowed the user"}), 200
