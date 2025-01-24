@@ -6,6 +6,10 @@ class Follow(db.Model):
     followed_clerkId = db.Column(db.String(255), db.ForeignKey('user.clerkId'), nullable=False)
     createdAt = db.Column(db.DateTime, default=db.func.current_timestamp())
 
-    follower = db.relationship('User', foreign_keys=[follower_clerkId], backref='following')
-    followed = db.relationship('User', foreign_keys=[followed_clerkId], backref='followers')
+    follower = db.relationship('User', foreign_keys=[follower_clerkId], backref='followers')
+    followed = db.relationship('User', foreign_keys=[followed_clerkId], backref='followings')
+
+    def __init__(self, follower_clerkId, followed_clerkId):
+        self.follower_clerkId = follower_clerkId
+        self.followed_clerkId = followed_clerkId
 
