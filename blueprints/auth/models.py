@@ -10,13 +10,14 @@ class User(db.Model):
     createdAt = db.Column(db.DateTime, default=db.func.current_timestamp())
     updatedAt = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
-    def __init__(self, clerkId, email, phone_number, role):
+    def __init__(self, clerkId, name, email, phone_number, role):
         self.clerkId = clerkId
+        self.name = name
         self.email = email
         self.phone_number = phone_number
         self.role = role
 
-    user_details = db.relationship('UserDetails', back_populates='user', uselist=False, foreign_keys='UserDetails.clerkid')
+    # user_details = db.relationship('UserDetails', back_populates='user', uselist=False, foreign_keys='UserDetails.clerkid')
     follow = db.relationship('Follow', back_populates='user', uselist=False, foreign_keys='Follow.clerkid')
 
 
