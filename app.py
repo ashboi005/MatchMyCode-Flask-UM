@@ -5,9 +5,11 @@ from flasgger import Swagger
 from blueprints.auth.auth_bp import auth_bp
 from blueprints.follow.follow_bp import follow_bp
 from blueprints.user.user_bp import user_bp
+from blueprints.mentor.mentor_bp import mentor_bp
 from blueprints.auth.models import User
 # from blueprints.follow.models import Follow
 from blueprints.user.models import UserDetails
+from blueprints.mentor.models import Mentor
 
 app = Flask(__name__)
 configure_app(app)
