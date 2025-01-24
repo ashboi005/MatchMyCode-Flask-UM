@@ -17,7 +17,7 @@ class User(db.Model):
         self.phone_number = phone_number
         self.role = role
 
-    # user_details = db.relationship('UserDetails', back_populates='user', uselist=False, foreign_keys='UserDetails.clerkid')
+    user_details = db.relationship('UserDetails', back_populates='user', uselist=False, foreign_keys='UserDetails.clerkId')
     follow = db.relationship('Follow', back_populates='user', uselist=False, foreign_keys='Follow.clerkId')
 
 
