@@ -18,3 +18,5 @@ class User(db.Model):
     user_details = db.relationship('UserDetails', back_populates='user', uselist=False, foreign_keys='UserDetails.clerkid')
     follow = db.relationship('Follow', back_populates='user', uselist=False, foreign_keys='Follow.clerkid')
 
+
+
