@@ -13,3 +13,4 @@ class Follow(db.Model):
         self.clerkId = clerkId
         self.follower_clerkId = follower_clerkId
         self.followed_clerkId = followed_clerkId
+
