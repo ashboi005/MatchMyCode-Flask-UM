@@ -18,8 +18,9 @@ class User(db.Model):
         self.role = role
 
     user_details = db.relationship('UserDetails', back_populates='user', uselist=False, foreign_keys='UserDetails.clerkId')
-    followers = db.relationship('Follow', foreign_keys='Follow.followed_clerkId', backref='follower_user')
-    followings = db.relationship('Follow', foreign_keys='Follow.follower_clerkId', backref='followed_user')
+    mentor = db.relationship('Mentor', back_populates='user', uselist=False, foreign_keys='Mentor.clerkId')
+    # following = db.relationship('Follow', foreign_keys='Follow.follower_clerkId', backref='follower_user')
+    # followers = db.relationship('Follow', foreign_keys='Follow.followed_clerkId', backref='followed_user')
 
 
 

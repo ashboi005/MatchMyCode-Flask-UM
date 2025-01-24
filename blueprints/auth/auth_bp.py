@@ -40,6 +40,10 @@ auth_bp = Blueprint('auth_bp', __name__)
 @auth_bp.route('/create_user', methods=['POST'])
 def create_user():
     data = request.get_json()
+    existing_user = User.query.filter_by(clerkId=data['clerkId']).first()
+    if existing_user:
+        return jsonify({"message": "User with this clerkId already exists"}), 400
+
     new_user = User(
         clerkId=data['clerkId'],
         name=data['name'],

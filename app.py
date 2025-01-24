@@ -6,7 +6,7 @@ from blueprints.auth.auth_bp import auth_bp
 from blueprints.follow.follow_bp import follow_bp
 from blueprints.user.user_bp import user_bp
 from blueprints.auth.models import User
-from blueprints.follow.models import Follow
+# from blueprints.follow.models import Follow
 from blueprints.user.models import UserDetails
 
 app = Flask(__name__)
