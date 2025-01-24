@@ -6,38 +6,38 @@ from .models import Follow
 
 follow_bp = Blueprint('follow_bp', __name__)
 
-# @swag_from({
-#     'tags': ['Follow'],
-#     'summary': 'Send a follow request',
-#     'parameters': [
-#         {
-#             'name': 'body',
-#             'in': 'body',
-#             'required': True,
-#             'schema': {
-#                 'type': 'object',
-#                 'properties': {
-#                     'follower_clerkid': {'type': 'string'},
-#                     'followed_clerkid': {'type': 'string'}
-#                 },
-#                 'required': ['follower_clerkid', 'followed_clerkid']
-#             }
-#         }
-#     ],
-#     'responses': {
-#         '201': {
-#             'description': 'Follow request created successfully'
-#         },
-#         '400': {
-#             'description': 'Invalid input'
-#         }
-#     }
-# })
-# @follow_bp.route('/request/<clerkId>', methods=['POST'])
-# def send_follow_request(clerkId):
-#     data = request.get_json()
-#     follower_clerkid = data['follower_clerkid']
-#     followed_clerkid = data['followed_clerkid']
+@swag_from({
+    'tags': ['Follow'],
+    'summary': 'Send a follow request directly and update both lists',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'follower_clerkid': {'type': 'string'},
+                    'followed_clerkid': {'type': 'string'}
+                },
+                'required': ['follower_clerkid', 'followed_clerkid']
+            }
+        }
+    ],
+    'responses': {
+        '201': {
+            'description': 'Follow request created successfully'
+        },
+        '400': {
+            'description': 'Invalid input'
+        }
+    }
+})
+@follow_bp.route('/request/<clerkId>', methods=['POST'])
+def send_follow_request(clerkId):
+    data = request.get_json()
+    follower_clerkid = data['follower_clerkid']
+    followed_clerkid = data['followed_clerkid']
     
 #     # Check if the user is trying to follow themselves
 #     if follower_clerkid == followed_clerkid:
@@ -52,16 +52,28 @@ follow_bp = Blueprint('follow_bp', __name__)
 #     if existing_follow:
 #         return jsonify({"message": "Follow request already exists"}), 400
 
-#     # Create new follow request
-#     new_follow = Follow(
-#         clerkid=clerkId,
-#         follower_clerkid=follower_clerkid,
-#         followed_clerkid=followed_clerkid
-#     )
-#     db.session.add(new_follow)
-#     db.session.commit()
+    # Create follow relationship from the follower's side
+    follow_from_follower = Follow(
+        clerkid=clerkId,
+        follower_clerkid=follower_clerkid,
+        followed_clerkid=followed_clerkid
+    )
+    
+    # Create follow relationship from the followed person's side (followers list)
+    follow_from_followed = Follow(
+        clerkid=clerkId,
+        follower_clerkid=followed_clerkid,
+        followed_clerkid=follower_clerkid
+    )
 
-#     return jsonify({"message": "Follow request sent successfully"}), 201
+    # Add both follow relationships to the session
+    db.session.add(follow_from_follower)
+    db.session.add(follow_from_followed)
+    
+    # Commit both changes to the database
+    db.session.commit()
+
+    return jsonify({"message": "Follow request sent successfully, both lists updated"}), 201
 
 
 # @swag_from({
