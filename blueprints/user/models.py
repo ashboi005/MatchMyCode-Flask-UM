@@ -3,10 +3,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 class UserDetails(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    clerkId = db.Column(db.String(255), db.ForeignKey('user.clerkId'), nullable=False)
+    clerkId = db.Column(db.String(255), db.ForeignKey('users.clerkId'), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), nullable=False)
     phone_number = db.Column(db.String(20), nullable=True)
+    city = db.Column(db.String(50), nullable=True)
+    state= db.Column(db.String(50), nullable=True)
+    country = db.Column(db.String(50), nullable=True)
     role = db.Column(db.String(50), nullable=False)
     bio = db.Column(db.Text, nullable=True)
     portfolio_links = db.Column(JSONB, nullable=True)

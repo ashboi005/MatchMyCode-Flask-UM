@@ -52,6 +52,9 @@ def post_user_details():
         email=user.email,
         phone_number=user.phone_number,
         role=user.role,
+        city=data.get('city', ''),
+        state=data.get('state', ''),
+        country=data.get('country', ''),
         bio=data.get('bio', ''),
         portfolio_links=data.get('portfolio_links', []),
         tags=data.get('tags', []),
@@ -125,6 +128,9 @@ def get_user_details_public(clerkId):
         "name": user_details.user.name,
         "bio": user_details.bio,
         "portfolio_links": user_details.portfolio_links,
+        "city": user_details.city,
+        "state": user_details.state,
+        "country": user_details.country,
         "tags": user_details.tags,
         "skills": user_details.skills,
         "interests": user_details.interests,
@@ -133,7 +139,6 @@ def get_user_details_public(clerkId):
     }
     return jsonify(public_details), 200
 
-# UPDATE USER DETAILS ROUTE
 @swag_from({
     'tags': ['User'],
     'summary': 'Update user details',
@@ -151,6 +156,9 @@ def get_user_details_public(clerkId):
             'schema': {
                 'type': 'object',
                 'properties': {
+                    'name': {'type': 'string'},
+                    'email': {'type': 'string'},
+                    'phone_number': {'type': 'string'},
                     'bio': {'type': 'string'},
                     'portfolio_links': {'type': 'array', 'items': {'type': 'string'}},
                     'tags': {'type': 'array', 'items': {'type': 'string'}},
@@ -178,7 +186,13 @@ def update_user_details(clerkId):
     if not user_details:
         return jsonify({"message": "User details not found"}), 404
 
+    user_details.name = data.get('name', user_details.name)
+    user_details.email = data.get('email', user_details.email)
+    user_details.phone_number = data.get('phone_number', user_details.phone_number)
     user_details.bio = data.get('bio', user_details.bio)
+    user_details.city = data.get('city', user_details.city)
+    user_details.state = data.get('state', user_details.state)
+    user_details.country = data.get('country', user_details.country)
     user_details.portfolio_links = data.get('portfolio_links', user_details.portfolio_links)
     user_details.tags = data.get('tags', user_details.tags)
     user_details.skills = data.get('skills', user_details.skills)
