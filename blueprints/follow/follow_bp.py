@@ -126,6 +126,12 @@ def unfollow_user():
     follower_id = data.get('follower_clerk_id')
     followed_id = data.get('followed_clerk_id')
 
+    follower = User.query.get(follower_id)
+    followed = User.query.get(followed_id)
+    
+    if not follower or not followed:
+        return jsonify({'error': 'User not found'}), 404
+
     follow = Follow.query.filter_by(follower_id=follower_id, followed_id=followed_id).first()
     if not follow:
         return jsonify({'error': 'Not following'}), 404

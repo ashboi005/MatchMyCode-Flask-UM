@@ -6,7 +6,7 @@ from flasgger import swag_from
 
 user_bp = Blueprint('user_bp', __name__)
 
-# POST USER DETAILS ROUTE
+# POST USER DETAILS ROUTE 
 @swag_from({
     'tags': ['User'],
     'summary': 'Post user details',
@@ -19,6 +19,10 @@ user_bp = Blueprint('user_bp', __name__)
                 'type': 'object',
                 'properties': {
                     'clerkId': {'type': 'string'},
+                    'city': {'type': 'string'},
+                    'state': {'type': 'string'},
+                    'country': {'type': 'string'},
+                    'bio': {'type': 'string'},
                     'portfolio_links': {'type': 'array', 'items': {'type': 'string'}},
                     'tags': {'type': 'array', 'items': {'type': 'string'}},
                     'skills': {'type': 'array', 'items': {'type': 'string'}},
@@ -36,6 +40,9 @@ user_bp = Blueprint('user_bp', __name__)
         },
         '400': {
             'description': 'Invalid input'
+        },
+        '404': {
+            'description': 'User not found'
         }
     }
 })
@@ -45,7 +52,11 @@ def post_user_details():
     user = User.query.filter_by(clerkId=data['clerkId']).first()
     if not user:
         return jsonify({"message": "User not found"}), 404
-
+    
+    existing_user_details = UserDetails.query.filter_by(clerkId=data['clerkId']).first()
+    if existing_user_details:
+        return jsonify({"message": "User details already exist"}), 400
+    
     user_details = UserDetails(
         clerkId=data['clerkId'],
         name=user.name,
@@ -135,7 +146,9 @@ def get_user_details_public(clerkId):
         "skills": user_details.skills,
         "interests": user_details.interests,
         "socials": user_details.socials,
-        "ongoing_project_links": user_details.ongoing_project_links
+        "ongoing_project_links": user_details.ongoing_project_links,
+        "average_rating": user_details.average_rating,
+        "verified": user_details.verified
     }
     return jsonify(public_details), 200
 

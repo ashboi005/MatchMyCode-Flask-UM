@@ -26,7 +26,6 @@ class UserDetails(db.Model):
     createdAt = db.Column(db.DateTime, default=db.func.current_timestamp())
     updatedAt = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     verified = db.Column(db.Boolean, default=False)
-    average_rating = db.Column(db.Float, nullable=True)
 
     user = db.relationship('User', back_populates='user_details', foreign_keys=[clerkId])
 
@@ -56,7 +55,7 @@ class UserDetails(db.Model):
                         .filter(Review.user_clerkId == self.clerkId)\
                         .scalar()
 
-    def __init__(self, clerkId, name, email, phone_number, role, bio, portfolio_links, tags, skills, interests, ongoing_project_links, socials, city=None, state=None, country=None, verified=False, average_rating=None):
+    def __init__(self, clerkId, name, email, phone_number, role, bio, portfolio_links, tags, skills, interests, ongoing_project_links, socials, city=None, state=None, country=None, verified=False):
         self.clerkId = clerkId
         self.name = name
         self.email = email
@@ -73,4 +72,3 @@ class UserDetails(db.Model):
         self.state = state
         self.country = country
         self.verified = verified
-        self.average_rating = average_rating
