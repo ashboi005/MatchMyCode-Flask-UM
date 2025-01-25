@@ -16,8 +16,9 @@ from blueprints.reviews.reviews_bp import reviews_bp
 from blueprints.organiser.organiser_bp import organiser_bp
 from blueprints.projects.projects_bp import projects_bp
 from blueprints.hackathon.hackathon_bp import hackathon_bp
+from blueprints.feed.feed_bp import feed_bp
 from blueprints.hackathon.models import Hackathon
-from blueprints.feed.models import FeedRequestProject, FeedRequestPerson
+
 
 # Initialize Flask app
 app = Flask(__name__)
