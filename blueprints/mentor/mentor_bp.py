@@ -1,15 +1,15 @@
 from flask import Blueprint, request, jsonify
 from config import db
-from blueprints.auth.models import User  
+from blueprints.auth.models import User
+from blueprints.mentor.models import MentorDetails
 from flasgger import swag_from
-from blueprints.mentor.models import Mentor  
 
-mentor_bp = Blueprint('mentor_bp', __name__)
+mentors_bp = Blueprint('mentors_bp', __name__)
 
-# POST - Create a new mentor
+# POST MENTOR DETAILS ROUTE
 @swag_from({
-    'tags': ['Mentors'],
-    'summary': 'Create a new mentor',
+    'tags': ['Mentor'],
+    'summary': 'Post mentor details',
     'parameters': [
         {
             'name': 'body',
@@ -19,54 +19,67 @@ mentor_bp = Blueprint('mentor_bp', __name__)
                 'type': 'object',
                 'properties': {
                     'clerkId': {'type': 'string'},
-                    'name': {'type': 'string'},
-                    'email': {'type': 'string'},
                     'phone_number': {'type': 'string'},
-                    'skills': {'type': 'array', 'items': {'type': 'string'}},  
-                    'tags': {'type': 'array', 'items': {'type': 'string'}},   
-                    'bio': {'type': 'string'}  # Bio field
+                    'bio': {'type': 'string'},
+                    'portfolio_links': {'type': 'array', 'items': {'type': 'string'}},
+                    'tags': {'type': 'array', 'items': {'type': 'string'}},
+                    'skills': {'type': 'array', 'items': {'type': 'string'}},
+                    'interests': {'type': 'array', 'items': {'type': 'string'}},
+                    'socials': {'type': 'array', 'items': {'type': 'string'}},
+                    'ongoing_project_links': {'type': 'array', 'items': {'type': 'string'}},
+                    'education': {'type': 'string'},
+                    'experience_years': {'type': 'integer'},
+                    'city': {'type': 'string'},
+                    'state': {'type': 'string'},
+                    'country': {'type': 'string'}
                 },
-                'required': ['clerkId', 'name', 'email']
+                'required': ['clerkId']
             }
         }
     ],
     'responses': {
         '201': {
-            'description': 'Mentor created successfully'
+            'description': 'Mentor details posted successfully'
         },
         '400': {
             'description': 'Invalid input'
         }
     }
 })
-@mentor_bp.route('/create_mentor', methods=['POST'])
-def create_mentor():
+@mentors_bp.route('/post_mentor_details', methods=['POST'])
+def post_mentor_details():
     data = request.get_json()
+    mentor = User.query.filter_by(clerkId=data['clerkId']).first()
+    if not mentor:
+        return jsonify({"message": "Mentor not found"}), 404
 
-    # Check if the mentor already exists
-    existing_mentor = Mentor.query.filter_by(clerkId=data['clerkId']).first()
-    if existing_mentor:
-        return jsonify({"message": "Mentor with this clerkId already exists"}), 400
-
-    new_mentor = Mentor(
+    mentor_details = MentorDetails(
         clerkId=data['clerkId'],
-        name=data['name'],
-        email=data['email'],
+        name=mentor.name,
+        email=mentor.email,
         phone_number=data.get('phone_number'),
-        skills=data.get('skills', []),  # Default to empty list if no skills are provided
-        tags=data.get('tags', []),      # Default to empty list if no tags are provided
-        bio=data.get('bio', '')         # Default to empty string if no bio is provided
+        role='mentor',  # Assuming role is set to 'mentor'
+        bio=data.get('bio'),
+        portfolio_links=data.get('portfolio_links', []),
+        tags=data.get('tags', []),
+        skills=data.get('skills', []),
+        interests=data.get('interests', []),
+        socials=data.get('socials', []),
+        ongoing_project_links=data.get('ongoing_project_links', []),
+        education=data.get('education'),
+        experience_years=data.get('experience_years'),
+        city=data.get('city'),
+        state=data.get('state'),
+        country=data.get('country')
     )
-
-    db.session.add(new_mentor)
+    db.session.add(mentor_details)
     db.session.commit()
-    return jsonify({"message": "Mentor created successfully"}), 201
+    return jsonify({"message": "Mentor details posted successfully"}), 201
 
-
-# GET - Fetch mentor details by clerkId
+# GET MENTOR DETAILS FOR PUBLIC VIEW ROUTE
 @swag_from({
-    'tags': ['Mentors'],
-    'summary': 'Get mentor details by clerkId',
+    'tags': ['Mentor'],
+    'summary': 'Get mentor details for public view',
     'parameters': [
         {
             'name': 'clerkId',
@@ -77,67 +90,136 @@ def create_mentor():
     ],
     'responses': {
         '200': {
-            'description': 'Mentor details fetched successfully',
+            'description': 'Mentor details retrieved successfully'
+        },
+        '404': {
+            'description': 'Mentor not found'
+        }
+    }
+})
+@mentors_bp.route('/get_mentor_details_public/<clerkId>', methods=['GET'])
+def get_mentor_details_public(clerkId):
+    mentor_details = MentorDetails.query.filter_by(clerkId=clerkId).first()
+    if not mentor_details:
+        return jsonify({"message": "Mentor details not found"}), 404
+
+    public_details = {
+        "name": mentor_details.name,
+        "bio": mentor_details.bio,
+        "tags": mentor_details.tags,
+        "skills": mentor_details.skills,
+        "portfolio_links": mentor_details.portfolio_links,
+        "interests": mentor_details.interests,
+        "socials": mentor_details.socials,
+        "ongoing_project_links": mentor_details.ongoing_project_links,
+        "education": mentor_details.education,
+        "experience_years": mentor_details.experience_years,
+        "city": mentor_details.city,
+        "state": mentor_details.state,
+        "country": mentor_details.country
+    }
+    return jsonify(public_details), 200
+
+# UPDATE MENTOR DETAILS ROUTE
+@swag_from({
+    'tags': ['Mentor'],
+    'summary': 'Update mentor details',
+    'parameters': [
+        {
+            'name': 'clerkId',
+            'in': 'path',
+            'required': True,
+            'type': 'string'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'clerkId': {'type': 'string'},
-                    'name': {'type': 'string'},
-                    'email': {'type': 'string'},
-                    'phone_number': {'type': 'string'},
-                    'skills': {'type': 'array', 'items': {'type': 'string'}},
+                    'bio': {'type': 'string'},
+                    'portfolio_links': {'type': 'array', 'items': {'type': 'string'}},
                     'tags': {'type': 'array', 'items': {'type': 'string'}},
-                    'bio': {'type': 'string'}
+                    'skills': {'type': 'array', 'items': {'type': 'string'}},
+                    'interests': {'type': 'array', 'items': {'type': 'string'}},
+                    'socials': {'type': 'array', 'items': {'type': 'string'}},
+                    'ongoing_project_links': {'type': 'array', 'items': {'type': 'string'}},
+                    'education': {'type': 'string'},
+                    'experience_years': {'type': 'integer'},
+                    'city': {'type': 'string'},
+                    'state': {'type': 'string'},
+                    'country': {'type': 'string'},
+                    'phone_number': {'type': 'string'}
                 }
             }
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'Mentor details updated successfully'
         },
         '404': {
             'description': 'Mentor not found'
         }
     }
 })
-@mentor_bp.route('/mentor/<clerkId>', methods=['GET'])
-def get_mentor(clerkId):
-    mentor = Mentor.query.filter_by(clerkId=clerkId).first()
-    if mentor:
-        return jsonify({
-            'clerkId': mentor.clerkId,
-            'name': mentor.name,
-            'email': mentor.email,
-            'phone_number': mentor.phone_number,
-            'skills': mentor.skills,
-            'tags': mentor.tags,
-            'bio': mentor.bio
-        }), 200
-    return jsonify({"message": "Mentor not found"}), 404
+@mentors_bp.route('/update_mentor_details/<clerkId>', methods=['PUT'])
+def update_mentor_details(clerkId):
+    data = request.get_json()
+    mentor_details = MentorDetails.query.filter_by(clerkId=clerkId).first()
+    if not mentor_details:
+        return jsonify({"message": "Mentor details not found"}), 404
 
+    mentor_details.bio = data.get('bio', mentor_details.bio)
+    mentor_details.portfolio_links = data.get('portfolio_links', mentor_details.portfolio_links)
+    mentor_details.tags = data.get('tags', mentor_details.tags)
+    mentor_details.skills = data.get('skills', mentor_details.skills)
+    mentor_details.interests = data.get('interests', mentor_details.interests)
+    mentor_details.socials = data.get('socials', mentor_details.socials)
+    mentor_details.ongoing_project_links = data.get('ongoing_project_links', mentor_details.ongoing_project_links)
+    mentor_details.education = data.get('education', mentor_details.education)
+    mentor_details.experience_years = data.get('experience_years', mentor_details.experience_years)
+    mentor_details.city = data.get('city', mentor_details.city)
+    mentor_details.state = data.get('state', mentor_details.state)
+    mentor_details.country = data.get('country', mentor_details.country)
+    mentor_details.phone_number = data.get('phone_number', mentor_details.phone_number)
 
-# DELETE - Delete a mentor by clerkId
+    db.session.commit()
+    return jsonify({"message": "Mentor details updated successfully"}), 200
+
+# SEARCH MENTORS BY TAGS/SKILLS ROUTE
 @swag_from({
-    'tags': ['Mentors'],
-    'summary': 'Delete a mentor by clerkId',
+    'tags': ['Mentor'],
+    'summary': 'Search mentors by tags or skills',
     'parameters': [
         {
-            'name': 'clerkId',
-            'in': 'path',
-            'required': True,
+            'name': 'tags',
+            'in': 'query',
+            'type': 'string'
+        },
+        {
+            'name': 'skills',
+            'in': 'query',
             'type': 'string'
         }
     ],
     'responses': {
         '200': {
-            'description': 'Mentor deleted successfully'
-        },
-        '404': {
-            'description': 'Mentor not found'
+            'description': 'Mentors retrieved successfully'
         }
     }
 })
-@mentor_bp.route('/mentor/<clerkId>', methods=['DELETE'])
-def delete_mentor(clerkId):
-    mentor = Mentor.query.filter_by(clerkId=clerkId).first()
-    if mentor:
-        db.session.delete(mentor)
-        db.session.commit()
-        return jsonify({"message": "Mentor deleted successfully"}), 200
-    return jsonify({"message": "Mentor not found"}), 404
+@mentors_bp.route('/search_mentors', methods=['GET'])
+def search_mentors():
+    tags = request.args.get('tags')
+    skills = request.args.get('skills')
+    query = MentorDetails.query
+
+    if tags:
+        query = query.filter(MentorDetails.tags.contains([tags]))
+    if skills:
+        query = query.filter(MentorDetails.skills.contains([skills]))
+
+    mentors = query.all()
+    return jsonify([mentor.to_dict() for mentor in mentors]), 200
