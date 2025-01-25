@@ -50,6 +50,8 @@ mentors_bp = Blueprint('mentors_bp', __name__)
 def post_mentor_details():
     data = request.get_json()
     mentor = User.query.filter_by(clerkId=data['clerkId']).first()
+    if mentor.role != 'mentor':
+        return jsonify({"message": "User is not a mentor"}), 400
     if not mentor:
         return jsonify({"message": "Mentor not found"}), 404
 
@@ -57,8 +59,8 @@ def post_mentor_details():
         clerkId=data['clerkId'],
         name=mentor.name,
         email=mentor.email,
-        phone_number=data.get('phone_number'),
-        role='mentor',  # Assuming role is set to 'mentor'
+        phone_number=mentor.phone_number,
+        role=mentor.role,
         bio=data.get('bio'),
         portfolio_links=data.get('portfolio_links', []),
         tags=data.get('tags', []),

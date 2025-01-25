@@ -41,7 +41,7 @@ class UserDetails(db.Model):
             'updatedAt': self.updatedAt
         }
 
-    def __init__(self, clerkId, name, email, phone_number, role, bio, portfolio_links, tags, skills, interests, ongoing_project_links, socials):
+    def __init__(self, clerkId, name, email, phone_number, role, bio, portfolio_links, tags, skills, interests, ongoing_project_links, socials, city=None, state=None, country=None):
         self.clerkId = clerkId
         self.name = name
         self.email = email
@@ -54,3 +54,6 @@ class UserDetails(db.Model):
         self.interests = interests
         self.socials = socials
         self.ongoing_project_links = ongoing_project_links
+        self.city = city
+        self.state = state
+        self.country = country
