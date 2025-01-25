@@ -13,7 +13,8 @@ class User(db.Model):
     # Relationships
     user_details = db.relationship('UserDetails', back_populates='user', uselist=False)
     mentor_details = db.relationship('MentorDetails', back_populates='mentor', uselist=False)
-    organiser_details = db.relationship('OrganiserDetails', back_populates='user', uselist=False)
+    # organiser_details = db.relationship('OrganiserDetails', back_populates='user', uselist=False)
+    projects = db.relationship('Project', back_populates='user')
     # Follow relationships
     following_relationships = db.relationship(
         'Follow', 
@@ -28,6 +29,7 @@ class User(db.Model):
         backref='followed_user', 
         lazy='dynamic'
     )
+    
 
     # In your User model
     @property

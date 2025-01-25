@@ -4,6 +4,7 @@ from sqlalchemy.sql import func
 from sqlalchemy import event
 from sqlalchemy.ext.hybrid import hybrid_property
 from blueprints.reviews.models import Review
+from blueprints.auth.models import User
 
 class UserDetails(db.Model):
     id = db.Column(db.Integer, primary_key=True)
