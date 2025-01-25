@@ -7,66 +7,42 @@ class OrganiserDetails(db.Model):
 
     # Required Fields
     id = db.Column(db.Integer, primary_key=True)
-    clerkId = db.Column(
-        db.String(255), 
-        db.ForeignKey('users.clerkId'), 
-        unique=True, 
-        nullable=False
-    )
-    name = db.Column(db.String(255), nullable=False)
-    email = db.Column(db.String(255), unique=True, nullable=False)
+    clerkId = db.Column(db.String(255), db.ForeignKey('users.clerkId'), unique=True, nullable=False)
     role = db.Column(db.String(50), default='organiser', nullable=False)
     
-    # Optional Fields
-    phone_number = db.Column(db.String(20))
+    # Organiser-Specific Fields (No duplicates of User fields)
     organization = db.Column(db.String(255))
     website = db.Column(db.String(255))
     bio = db.Column(db.Text)
-    socials = db.Column(JSONB, default={})  # {platform: username/url}
-    tags = db.Column(JSONB, default=[])     # ["Tech", "Education"]
+    socials = db.Column(JSONB, default={})
+    tags = db.Column(JSONB, default=[])
     
     # Timestamps
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
-    updatedAt = db.Column(
-        db.DateTime, 
-        default=datetime.utcnow, 
-        onupdate=datetime.utcnow
-    )
+    updatedAt = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    user = db.relationship('User', back_populates='organiser_details', foreign_keys=[clerkId])
+    # Relationships
+    user = db.relationship('User', back_populates='organiser_details')
 
-    def __init__(
-        self,
-        clerkId,
-        name,
-        email,
-        phone_number=None,
-        organization=None,
-        website=None,
-        bio=None,
-        socials=None,
-        tags=None
-    ):
+    def __init__(self, clerkId, **kwargs):
         self.clerkId = clerkId
-        self.name = name
-        self.email = email
-        self.role = 'organiser'  # Force role
-        
-        # Optional fields with safe defaults
-        self.phone_number = phone_number
-        self.organization = organization
-        self.website = website
-        self.bio = bio
-        self.socials = socials if socials is not None else {}
-        self.tags = tags if tags is not None else []
+        self.role = 'organiser'
+        self.organization = kwargs.get('organization')
+        self.website = kwargs.get('website')
+        self.bio = kwargs.get('bio')
+        self.socials = kwargs.get('socials', {})
+        self.tags = kwargs.get('tags', [])
 
     def to_dict(self):
         return {
-            'clerkId': self.clerkId,
+            # User Info from User table
+            'clerkId': self.user.clerkId,
             'name': self.user.name,
             'email': self.user.email,
+            'phone_number': self.user.phone_number,
+            
+            # Organiser-Specific Info
             'role': self.role,
-            'phone_number': self.phone_number,
             'organization': self.organization,
             'website': self.website,
             'bio': self.bio,

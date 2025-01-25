@@ -1,12 +1,13 @@
 from flask import Blueprint, request, jsonify
 from config import db
 from flasgger import swag_from
+from blueprints.auth.models import User
 from .models import OrganiserDetails
 
-organiser_bp = Blueprint('organiser_bp', __name__, url_prefix='/organisers')
+organiser_bp = Blueprint('organiser_bp', __name__, url_prefix='/organiser_details')
 
 # CREATE ORGANISER PROFILE
-@organiser_bp.route('', methods=['POST'])
+@organiser_bp.route('/post_organiser_details', methods=['POST'])
 @swag_from({
     'tags': ['Organiser'],
     'summary': 'Create new organiser profile',
@@ -18,9 +19,6 @@ organiser_bp = Blueprint('organiser_bp', __name__, url_prefix='/organisers')
             'type': 'object',
             'properties': {
                 'clerkId': {'type': 'string'},
-                'name': {'type': 'string'},
-                'email': {'type': 'string'},
-                'phone_number': {'type': 'string'},
                 'organization': {'type': 'string'},
                 'website': {'type': 'string'},
                 'bio': {'type': 'string'},
@@ -34,27 +32,34 @@ organiser_bp = Blueprint('organiser_bp', __name__, url_prefix='/organisers')
                 },
                 'tags': {'type': 'array', 'items': {'type': 'string'}}
             },
-            'required': ['clerkId', 'name', 'email']
+            'required': ['clerkId']
         }
     }],
     'responses': {
         201: {'description': 'Organiser profile created successfully'},
         400: {'description': 'Invalid input or profile already exists'},
+        404: {'description': 'User not found'},
         500: {'description': 'Server error'}
     }
 })
 def create_organiser():
     try:
         data = request.get_json()
+        user = User.query.filter_by(clerkId=data['clerkId']).first()
         
-        if Organiser.query.filter_by(clerkId=data['clerkId']).first():
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+            
+        if OrganiserDetails.query.filter_by(clerkId=data['clerkId']).first():
             return jsonify({"error": "Organiser profile already exists"}), 400
 
-        organiser = Organiser(
+        # Update user role to organiser
+        if user.role != 'organiser':
+            user.role = 'organiser'
+            db.session.add(user)
+
+        organiser = OrganiserDetails(
             clerkId=data['clerkId'],
-            name=data['name'],
-            email=data['email'],
-            phone_number=data.get('phone_number'),
             organization=data.get('organization'),
             website=data.get('website'),
             bio=data.get('bio'),
@@ -71,10 +76,10 @@ def create_organiser():
         return jsonify({"error": str(e)}), 500
 
 # UPDATE ORGANISER PROFILE
-@organiser_bp.route('/<string:clerkId>', methods=['PUT'])
+@organiser_bp.route('/update_organiser_details_public/<string:clerkId>', methods=['PUT'])
 @swag_from({
     'tags': ['Organiser'],
-    'summary': 'Update organiser profile',
+    'summary': 'Update organiser details',
     'parameters': [
         {
             'name': 'clerkId',
@@ -90,9 +95,6 @@ def create_organiser():
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'name': {'type': 'string'},
-                    'email': {'type': 'string'},
-                    'phone_number': {'type': 'string'},
                     'organization': {'type': 'string'},
                     'website': {'type': 'string'},
                     'bio': {'type': 'string'},
@@ -108,17 +110,17 @@ def create_organiser():
         400: {'description': 'Invalid input'}
     }
 })
-def update_organiser(clerkId):
+def update_organiser_details(clerkId):
     try:
         data = request.get_json()
-        organiser = Organiser.query.filter_by(clerkId=clerkId).first()
+        organiser = OrganiserDetails.query.filter_by(clerkId=clerkId).first()
 
         if not organiser:
             return jsonify({"error": "Organiser not found"}), 404
 
         updatable_fields = [
-            'name', 'email', 'phone_number', 'organization',
-            'website', 'bio', 'socials', 'tags'
+            'organization', 'website', 'bio',
+            'socials', 'tags'
         ]
 
         for field in updatable_fields:
@@ -132,31 +134,8 @@ def update_organiser(clerkId):
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
-# GET ORGANISER PROFILE (DASHBOARD)
-@organiser_bp.route('/<string:clerkId>', methods=['GET'])
-@swag_from({
-    'tags': ['Organiser'],
-    'summary': 'Get full organiser details',
-    'parameters': [{
-        'name': 'clerkId',
-        'in': 'path',
-        'type': 'string',
-        'required': True,
-        'description': 'ClerkID of the organiser'
-    }],
-    'responses': {
-        200: {'description': 'Organiser details retrieved'},
-        404: {'description': 'Organiser not found'}
-    }
-})
-def get_organiser(clerkId):
-    organiser = Organiser.query.filter_by(clerkId=clerkId).first()
-    if not organiser:
-        return jsonify({"error": "Organiser not found"}), 404
-    return jsonify(organiser.to_dict()), 200
-
 # GET PUBLIC ORGANISER PROFILE
-@organiser_bp.route('/<string:clerkId>/public', methods=['GET'])
+@organiser_bp.route('/get_organiser_details_public/<string:clerkId>', methods=['GET'])
 @swag_from({
     'tags': ['Organiser'],
     'summary': 'Get public organiser profile',
@@ -173,20 +152,21 @@ def get_organiser(clerkId):
     }
 })
 def get_public_organiser(clerkId):
-    organiser = Organiser.query.filter_by(clerkId=clerkId).first()
+    organiser = OrganiserDetails.query.filter_by(clerkId=clerkId).first()
     if not organiser:
         return jsonify({"error": "Organiser not found"}), 404
 
+    user = User.query.get(clerkId)
     public_profile = {
-        "name": organiser.name,
+        "name": user.name,
         "organization": organiser.organization,
         "website": organiser.website,
         "bio": organiser.bio,
         "socials": organiser.socials,
         "tags": organiser.tags,
         "contact": {
-            "phone": organiser.phone_number,
-            "email": organiser.email
+            "phone": user.phone_number,
+            "email": user.email
         }
     }
     return jsonify(public_profile), 200
