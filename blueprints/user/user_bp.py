@@ -266,57 +266,6 @@ def search_users():
     return jsonify([user.to_dict() for user in users]), 200
 
 
-# VERIFY USER ROUTE (BY MENTOR)
-@swag_from({
-    'tags': ['User'],
-    'summary': 'Verify a user by mentor',
-    'parameters': [
-        {
-            'name': 'clerkId',
-            'in': 'path',
-            'required': True,
-            'type': 'string',
-            'description': 'ClerkID of the user to verify'
-        },
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'clerkId': {'type': 'string', 'description': 'ClerkID of the mentor performing verification'}
-                },
-                'required': ['clerkId']
-            }
-        }
-    ],
-    'responses': {
-        '200': {'description': 'User verified successfully'},
-        '403': {'description': 'Only mentors can verify users'},
-        '404': {'description': 'User/Mentor not found'}
-    }
-})
-@user_bp.route('/verify_user/<clerkId>', methods=['POST'])
-def verify_user(clerkId):
-    data = request.get_json()
-    mentor_clerkId = data.get('clerkId')  # ClerkID of the mentor
-    
-    # Check if requester is a mentor
-    mentor = User.query.filter_by(clerkId=mentor_clerkId).first()
-    if not mentor or mentor.role != 'mentor':
-        return jsonify({"message": "Only mentors can verify users"}), 403
-    
-    # Find user to verify
-    user_details = UserDetails.query.filter_by(clerkId=clerkId).first()
-    if not user_details:
-        return jsonify({"message": "User not found"}), 404
-    
-    # Update verification status
-    user_details.verified = True
-    db.session.commit()
-    
-    return jsonify({"message": "User verified successfully"}), 200
 
 # GET USER ROLE BY CLERKID ROUTE
 @swag_from({

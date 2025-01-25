@@ -26,6 +26,7 @@ class Hackathon(db.Model):
     winners = db.Column(JSONB, default=[])
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
 
     def to_dict(self):
         return {
