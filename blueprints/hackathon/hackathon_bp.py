@@ -4,7 +4,6 @@ from flasgger import swag_from
 from blueprints.auth.models import User
 from blueprints.hackathon.models import Hackathon, UserHackathonRegistration
 from datetime import datetime
-import os
 
 hackathon_bp = Blueprint('hackathon_bp', __name__, url_prefix='/hackathons')
 

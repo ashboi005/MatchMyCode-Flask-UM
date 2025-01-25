@@ -304,3 +304,32 @@ def verify_user(clerkId):
     db.session.commit()
     
     return jsonify({"message": "User verified successfully"}), 200
+
+# GET USER ROLE BY CLERKID ROUTE
+@swag_from({
+    'tags': ['User'],
+    'summary': 'Get user role by clerkId',
+    'parameters': [
+        {
+            'name': 'clerkId',
+            'in': 'path',
+            'required': True,
+            'type': 'string'
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'User role retrieved successfully'
+        },
+        '404': {
+            'description': 'User not found'
+        }
+    }
+})
+@user_bp.route('/get_user_role/<clerkId>', methods=['GET'])
+def get_user_role(clerkId):
+    user = User.query.filter_by(clerkId=clerkId).first()
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    return jsonify({"role": user.role}), 200

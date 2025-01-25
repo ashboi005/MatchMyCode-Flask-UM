@@ -1,17 +1,19 @@
 #Flask App related imports
-from flask import Flask, request, jsonify, Blueprint
+from flask import Flask
 from flask_cors import CORS
 from config import configure_app, db
 from flasgger import Swagger
+from apscheduler.schedulers.background import BackgroundScheduler
+import datetime
+import os
 
 #Blueprints imports
-from apscheduler.schedulers.background import BackgroundScheduler
 from blueprints.auth.auth_bp import auth_bp
 from blueprints.follow.follow_bp import follow_bp
 from blueprints.user.user_bp import user_bp
 from blueprints.mentor.mentor_bp import mentors_bp
 from blueprints.reviews.reviews_bp import reviews_bp
-# from blueprints.organiser.organiser_bp import organiser_bp
+from blueprints.organiser.organiser_bp import organiser_bp
 from blueprints.projects.projects_bp import projects_bp
 
 #Models imports
@@ -22,7 +24,7 @@ from blueprints.user.models import UserDetails
 from blueprints.mentor.models import MentorDetails
 from blueprints.reviews.models import Review
 from blueprints.projects.models import Project
-# from blueprints.organiser.models import OrganiserDetails
+from blueprints.organiser.models import OrganiserDetails
 from blueprints.hackathon.models import Hackathon
 
 app = Flask(__name__)
@@ -38,7 +40,7 @@ app.register_blueprint(follow_bp, url_prefix='/follow')
 app.register_blueprint(user_bp, url_prefix='/user')
 app.register_blueprint(mentors_bp, url_prefix='/mentor')
 app.register_blueprint(reviews_bp, url_prefix='/reviews')
-# app.register_blueprint(organiser_bp, url_prefix='/organisers')
+app.register_blueprint(organiser_bp, url_prefix='/organisers')
 app.register_blueprint(projects_bp, url_prefix='/projects')
 app.register_blueprint(hackathon_bp, url_prefix='/hackathon')
 
@@ -78,8 +80,7 @@ def initialize_scheduler():
                 print("Scheduler already running")
 
 
-    
-    
+       
 # Default Route 
 @app.route('/')
 def hello():
