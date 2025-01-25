@@ -13,7 +13,7 @@ class User(db.Model):
     # Relationships
     user_details = db.relationship('UserDetails', back_populates='user', uselist=False)
     mentor_details = db.relationship('MentorDetails', back_populates='mentor', uselist=False)
-    
+    organiser_details = db.relationship('OrganiserDetails', back_populates='user', uselist=False)
     # Follow relationships
     following_relationships = db.relationship(
         'Follow', 

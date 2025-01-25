@@ -40,7 +40,7 @@ class UserDetails(db.Model):
             'ongoing_project_links': self.ongoing_project_links,
             'createdAt': self.createdAt,
             'updatedAt': self.updatedAt,
-            'verifed': self.verified
+            'verified': self.verified
         }
 
     def __init__(self, clerkId, name, email, phone_number, role, bio, portfolio_links, tags, skills, interests, ongoing_project_links, socials, city=None, state=None, country=None, verified=False):
