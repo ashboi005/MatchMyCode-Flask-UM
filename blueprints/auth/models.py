@@ -44,3 +44,11 @@ class User(db.Model):
         self.email = email
         self.phone_number = phone_number
         self.role = role
+
+    user_details = db.relationship('UserDetails', back_populates='user', uselist=False, foreign_keys='UserDetails.clerkId')
+    mentor_details = db.relationship('MentorDetails', back_populates='mentor', uselist=False)
+    # following_relationships = db.relationship('Follow', foreign_keys='Follow.follower_clerkId', backref='follower_user')
+    # follower_relationships = db.relationship('Follow', foreign_keys='Follow.followed_clerkId', backref='followed_user')
+
+
+
