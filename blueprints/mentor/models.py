@@ -35,9 +35,6 @@ class MentorDetails(db.Model):
     createdAt = db.Column(db.DateTime, default=db.func.current_timestamp())
     updatedAt = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
-    # Verification status
-    verified = db.Column(db.Boolean, default=False)
-
     mentor = db.relationship('User', back_populates='mentor_details', foreign_keys=[clerkId])
 
     def to_dict(self):
@@ -63,12 +60,11 @@ class MentorDetails(db.Model):
             'experience_years': self.experience_years,
             'createdAt': self.createdAt,
             'updatedAt': self.updatedAt,
-            'verified': self.verified
         }
 
     def __init__(self, clerkId, name, email, phone_number, role, bio=None, portfolio_links=None, tags=None, 
                  skills=None, interests=None, socials=None, ongoing_project_links=None, education=None, 
-                 experience_years=None, city=None, state=None, country=None, verified=False):
+                 experience_years=None, city=None, state=None, country=None):
         self.clerkId = clerkId
         self.name = name
         self.email = email
@@ -86,7 +82,7 @@ class MentorDetails(db.Model):
         self.city = city
         self.state = state
         self.country = country
-        self.verified = verified
+
 
 
 

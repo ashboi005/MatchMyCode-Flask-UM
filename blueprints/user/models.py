@@ -20,6 +20,7 @@ class UserDetails(db.Model):
     ongoing_project_links = db.Column(JSONB, nullable=True)
     createdAt = db.Column(db.DateTime, default=db.func.current_timestamp())
     updatedAt = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    verified = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', back_populates='user_details', foreign_keys=[clerkId])
 
@@ -38,10 +39,11 @@ class UserDetails(db.Model):
             'socials': self.socials,
             'ongoing_project_links': self.ongoing_project_links,
             'createdAt': self.createdAt,
-            'updatedAt': self.updatedAt
+            'updatedAt': self.updatedAt,
+            'verifed': self.verified
         }
 
-    def __init__(self, clerkId, name, email, phone_number, role, bio, portfolio_links, tags, skills, interests, ongoing_project_links, socials, city=None, state=None, country=None):
+    def __init__(self, clerkId, name, email, phone_number, role, bio, portfolio_links, tags, skills, interests, ongoing_project_links, socials, city=None, state=None, country=None, verified=False):
         self.clerkId = clerkId
         self.name = name
         self.email = email
@@ -57,3 +59,4 @@ class UserDetails(db.Model):
         self.city = city
         self.state = state
         self.country = country
+        self.verified = verified
