@@ -160,6 +160,9 @@ def get_user_details_public(clerkId):
                     'email': {'type': 'string'},
                     'phone_number': {'type': 'string'},
                     'bio': {'type': 'string'},
+                    'city': {'type': 'string'},
+                    'state': {'type': 'string'},
+                    'country': {'type': 'string'},
                     'portfolio_links': {'type': 'array', 'items': {'type': 'string'}},
                     'tags': {'type': 'array', 'items': {'type': 'string'}},
                     'skills': {'type': 'array', 'items': {'type': 'string'}},
@@ -175,7 +178,7 @@ def get_user_details_public(clerkId):
             'description': 'User details updated successfully'
         },
         '404': {
-            'description': 'User not found'
+            'description': 'User details not found'
         }
     }
 })
