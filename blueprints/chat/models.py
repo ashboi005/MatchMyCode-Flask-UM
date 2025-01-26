@@ -17,6 +17,9 @@ class Chat(db.Model):
     created_by = db.Column(db.String(255), db.ForeignKey('users.clerkId'))  # Admin creator
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
 
+    team_id = db.Column(db.Integer, db.ForeignKey('teams.id'), unique=True)
+    team = db.relationship('Team', backref='chat', uselist=False)
+
     def add_participant(self, user_id):
         if not self.participants:
             self.participants = []

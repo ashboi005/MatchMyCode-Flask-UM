@@ -3,6 +3,8 @@ from datetime import datetime
 import random
 import string
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import event
+from blueprints.chat.models import Chat
 
 class Team(db.Model):
     __tablename__ = 'teams'
@@ -15,6 +17,7 @@ class Team(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     max_members = db.Column(db.Integer, nullable=False)
     members = db.Column(JSONB, default=[])  # Ensure default is an empty list
+    chat_room_id = db.Column(db.String(255), unique=True)
     
     # Relationships
     hackathon = db.relationship('Hackathon', backref='teams')
@@ -56,7 +59,8 @@ class Team(db.Model):
             'max_members': self.max_members,
             'current_members': self.current_members,
             'is_full': self.is_full,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'chat_room_id': self.chat_room_id
         }
 
     def add_member(self, clerk_id):
@@ -76,3 +80,22 @@ class Team(db.Model):
         if clerk_id == self.leader_id:
             raise ValueError("Cannot remove team leader")
         self.members.remove(clerk_id)
+
+@event.listens_for(Team, 'after_insert')
+def create_team_chat(mapper, connection, target):
+    chat_room_id = f"team-{target.id}"
+    connection.execute(
+        db.update(Team)
+        .where(Team.id == target.id)
+        .values(chat_room_id=chat_room_id)
+    )
+    connection.execute(
+        db.insert(Chat.__table__).values(
+            room_id=chat_room_id,
+            is_group=True,
+            participants=target.members,
+            created_at=db.func.current_timestamp(),
+            team_id=target.id  # Link the chat to the team
+        )
+    )
+

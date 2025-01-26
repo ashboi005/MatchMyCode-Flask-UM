@@ -247,3 +247,5 @@ def get_submissions(hackathon_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
