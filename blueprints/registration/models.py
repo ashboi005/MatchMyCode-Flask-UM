@@ -14,7 +14,7 @@ class Team(db.Model):
     team_code = db.Column(db.String(8), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     max_members = db.Column(db.Integer, nullable=False)
-    members = db.Column(JSONB, default=list, nullable=False)  # Changed default and set nullable=False
+    members = db.Column(JSONB, default=[])  # Ensure default is an empty list
     
     # Relationships
     hackathon = db.relationship('Hackathon', backref='teams')
@@ -23,7 +23,9 @@ class Team(db.Model):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.team_code = self._generate_team_code()
-        if self.leader_id not in self.members:
+        if self.members is None:  # Initialize members if None
+            self.members = []
+        if self.leader_id not in self.members:  # Add leader to members
             self.members.append(self.leader_id)
 
     def _generate_team_code(self):
@@ -35,7 +37,7 @@ class Team(db.Model):
 
     @property
     def current_members(self):
-        return len(self.members)
+        return len(self.members) if self.members else 0
 
     @property
     def is_full(self):
@@ -50,7 +52,7 @@ class Team(db.Model):
             'hackathon_title': self.hackathon.title if self.hackathon else None,
             'leader_id': self.leader_id,
             'leader_name': self.leader.name if self.leader else None,
-            'members': self.members,
+            'members': self.members if self.members else [],
             'max_members': self.max_members,
             'current_members': self.current_members,
             'is_full': self.is_full,
@@ -58,6 +60,8 @@ class Team(db.Model):
         }
 
     def add_member(self, clerk_id):
+        if self.members is None:
+            self.members = []
         if clerk_id in self.members:
             raise ValueError("User already in team")
         if self.is_full:
@@ -65,6 +69,8 @@ class Team(db.Model):
         self.members.append(clerk_id)
 
     def remove_member(self, clerk_id):
+        if self.members is None:
+            self.members = []
         if clerk_id not in self.members:
             raise ValueError("User not in team")
         if clerk_id == self.leader_id:
