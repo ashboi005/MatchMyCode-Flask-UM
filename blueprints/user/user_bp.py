@@ -3,6 +3,10 @@ from config import db
 from blueprints.auth.models import User
 from blueprints.user.models import UserDetails
 from flasgger import swag_from
+from blueprints.hackathon.models import Hackathon
+from blueprints.registration.models import Team
+
+
 
 user_bp = Blueprint('user_bp', __name__)
 
@@ -295,3 +299,76 @@ def get_user_role(clerkId):
         return jsonify({"message": "User not found"}), 404
 
     return jsonify({"role": user.role}), 200
+
+
+
+
+# Add this new route
+@swag_from({
+    'tags': ['User'],
+    'summary': 'Get hackathons participated by user',
+    'parameters': [
+        {
+            'name': 'clerkId',
+            'in': 'path',
+            'required': True,
+            'type': 'string'
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'List of hackathons participated in',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'hackathon_id': {'type': 'integer'},
+                        'title': {'type': 'string'},
+                        'description': {'type': 'string'},
+                        'start_date': {'type': 'string', 'format': 'date-time'},
+                        'end_date': {'type': 'string', 'format': 'date-time'},
+                        'status': {'type': 'string'},
+                        'team_id': {'type': 'integer'},
+                        'team_name': {'type': 'string'},
+                        'role': {'type': 'string'}  # 'leader' or 'member'
+                    }
+                }
+            }
+        },
+        '404': {
+            'description': 'User not found'
+        }
+    }
+})
+@user_bp.route('/user_hackathons/<clerkId>', methods=['GET'])
+def get_user_hackathons(clerkId):
+    # Verify user exists
+    user = User.query.filter_by(clerkId=clerkId).first()
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    # Get all teams the user is part of
+    teams = Team.query.filter(
+        (Team.leader_id == clerkId) | 
+        (Team.members.contains([clerkId]))
+    ).all()
+
+    # Get hackathons for these teams
+    hackathons = []
+    for team in teams:
+        hackathon = Hackathon.query.get(team.hackathon_id)
+        if hackathon:
+            hackathons.append({
+                'hackathon_id': hackathon.id,
+                'title': hackathon.title,
+                'description': hackathon.description,
+                'start_date': hackathon.start_date.isoformat(),
+                'end_date': hackathon.end_date.isoformat(),
+                'status': hackathon.status,
+                'team_id': team.id,
+                'team_name': team.team_name,
+                'role': 'leader' if team.leader_id == clerkId else 'member'
+            })
+
+    return jsonify(hackathons), 200
