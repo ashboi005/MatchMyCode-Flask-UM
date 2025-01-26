@@ -331,7 +331,17 @@ def get_user_role(clerkId):
                         'status': {'type': 'string'},
                         'team_id': {'type': 'integer'},
                         'team_name': {'type': 'string'},
-                        'role': {'type': 'string'}  # 'leader' or 'member'
+                        'role': {'type': 'string'},
+                        'team_members': {  # Added
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'clerkId': {'type': 'string'},
+                                    'name': {'type': 'string'}
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -359,6 +369,16 @@ def get_user_hackathons(clerkId):
     for team in teams:
         hackathon = Hackathon.query.get(team.hackathon_id)
         if hackathon:
+            # Get team members details (Added)
+            team_member_ids = [team.leader_id] + team.members
+            team_members = []
+            for member_id in team_member_ids:
+                member_user = User.query.filter_by(clerkId=member_id).first()
+                team_members.append({
+                    'clerkId': member_id,
+                    'name': member_user.name if member_user else 'Unknown'
+                })
+
             hackathons.append({
                 'hackathon_id': hackathon.id,
                 'title': hackathon.title,
@@ -368,7 +388,8 @@ def get_user_hackathons(clerkId):
                 'status': hackathon.status,
                 'team_id': team.id,
                 'team_name': team.team_name,
-                'role': 'leader' if team.leader_id == clerkId else 'member'
+                'role': 'leader' if team.leader_id == clerkId else 'member',
+                'team_members': team_members  # Added
             })
 
     return jsonify(hackathons), 200
