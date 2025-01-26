@@ -159,10 +159,10 @@ def join_team():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@registration_bp.route('/teams/<int:hackathon_id>', methods=['GET'])
+@registration_bp.route('/view_teams_organiser/<int:hackathon_id>', methods=['GET'])
 @swag_from({
     'tags': ['Registration'],
-    'summary': 'Get teams for hackathon (Organizer only)',
+    'summary': 'Get teams for hackathon (Organiser only)',
     'parameters': [
         {
             'name': 'clerkId',
