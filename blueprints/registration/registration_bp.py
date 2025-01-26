@@ -10,29 +10,6 @@ from .models import Team
 
 registration_bp = Blueprint('registration', __name__)
 
-@registration_bp.route('/hackathons', methods=['GET'])
-@swag_from({
-    'tags': ['Registration'],
-    'summary': 'Get hackathons with registration status',
-    'responses': {
-        200: {'description': 'List of hackathons with registration info'}
-    }
-})
-def get_hackathons():
-    now = datetime.utcnow()
-    hackathons = Hackathon.query.all()
-    
-    result = []
-    for hack in hackathons:
-        hack_data = hack.to_dict()
-        hack_data['registration_open'] = (
-            hack.registration_deadline > now and 
-            hack.status in ['approved', 'upcoming']
-        )
-        result.append(hack_data)
-    
-    return jsonify(result), 200
-
 @registration_bp.route('/create_team', methods=['POST'])
 @swag_from({
     'tags': ['Registration'],

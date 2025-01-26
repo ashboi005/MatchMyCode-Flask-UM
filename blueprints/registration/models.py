@@ -14,7 +14,7 @@ class Team(db.Model):
     team_code = db.Column(db.String(8), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     max_members = db.Column(db.Integer, nullable=False)
-    members = db.Column(JSONB, default=[])
+    members = db.Column(JSONB, default=list, nullable=False)  # Changed default and set nullable=False
     
     # Relationships
     hackathon = db.relationship('Hackathon', backref='teams')
