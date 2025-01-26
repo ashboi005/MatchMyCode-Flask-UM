@@ -3,6 +3,7 @@ from config import db
 from flasgger import swag_from
 from blueprints.auth.models import User
 from .models import OrganiserDetails
+from blueprints.hackathon.models import Hackathon, ProjectSubmission
 
 organiser_bp = Blueprint('organiser_bp', __name__, url_prefix='/organiser_details')
 
@@ -170,3 +171,79 @@ def get_public_organiser(clerkId):
         }
     }
     return jsonify(public_profile), 200
+
+
+@organiser_bp.route('/hackathons/<int:hackathon_id>/submissions', methods=['GET'])
+@swag_from({
+    'tags': ['Organiser'],
+    'summary': 'Get all project submissions for a hackathon',
+    'parameters': [
+        {
+            'name': 'hackathon_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID of the hackathon'
+        },
+        {
+            'name': 'clerkId',
+            'in': 'query',
+            'type': 'string',
+            'required': True,
+            'description': 'Clerk ID of the organiser'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'List of project submissions',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'id': {'type': 'integer'},
+                        'team_code': {'type': 'string'},
+                        'github_link': {'type': 'string'},
+                        'live_demo_link': {'type': 'string'},
+                        'submitted_at': {'type': 'string', 'format': 'date-time'},
+                        'team_name': {'type': 'string'}
+                    }
+                }
+            }
+        },
+        403: {'description': 'Unauthorized'},
+        404: {'description': 'Hackathon not found'}
+    }
+})
+def get_submissions(hackathon_id):
+    try:
+        clerk_id = request.args.get('clerkId')
+        organiser = User.query.get(clerk_id)
+
+        # Authorization check
+        if not organiser or organiser.role != 'organiser':
+            return jsonify({"error": "Unauthorized"}), 403
+
+        # Get hackathon
+        hackathon = Hackathon.query.get(hackathon_id)
+        if not hackathon:
+            return jsonify({"error": "Hackathon not found"}), 404
+
+        # Verify organiser owns the hackathon
+        if hackathon.organiser_clerkId != clerk_id:
+            return jsonify({"error": "Unauthorized to view submissions for this hackathon"}), 403
+
+        # Get submissions with team details
+        submissions = ProjectSubmission.query.filter_by(hackathon_id=hackathon_id).all()
+        
+        # Enhanced response with team names
+        result = []
+        for submission in submissions:
+            submission_data = submission.to_dict()
+            submission_data['team_name'] = submission.team.team_name if submission.team else 'Unknown Team'
+            result.append(submission_data)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

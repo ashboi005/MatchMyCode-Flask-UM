@@ -2,7 +2,9 @@ from flask import Blueprint, request, jsonify
 from config import db
 from flasgger import swag_from
 from blueprints.auth.models import User
-from blueprints.hackathon.models import Hackathon
+from blueprints.hackathon.models import Hackathon,ProjectSubmission
+from blueprints.registration.models import Team
+
 from datetime import datetime
 
 hackathon_bp = Blueprint('hackathon_bp', __name__, url_prefix='/hackathons')
@@ -241,3 +243,73 @@ def get_public_hackathons():
 def get_hackathon(hackathon_id):
     hackathon = Hackathon.query.get_or_404(hackathon_id)
     return jsonify(hackathon.to_dict()), 200
+
+
+@hackathon_bp.route('/submit_project', methods=['POST'])
+@swag_from({
+    'tags': ['Hackathon'],
+    'summary': 'Submit project for a hackathon',
+    'parameters': [{
+        'name': 'body',
+        'in': 'body',
+        'required': True,
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'hackathon_id': {'type': 'integer'},
+                'team_code': {'type': 'string'},
+                'github_link': {'type': 'string'},
+                'live_demo_link': {'type': 'string'}
+            },
+            'required': ['hackathon_id', 'team_code', 'github_link']
+        }
+    }],
+    'responses': {
+        201: {'description': 'Project submitted successfully'},
+        400: {'description': 'Invalid input or hackathon not live'},
+        403: {'description': 'Unauthorized'},
+        404: {'description': 'Hackathon or team not found'}
+    }
+})
+def submit_project():
+    data = request.get_json()
+    hackathon = Hackathon.query.get(data['hackathon_id'])
+    team = Team.query.filter_by(team_code=data['team_code']).first()
+
+    # Validate hackathon and team
+    if not hackathon:
+        return jsonify({"error": "Hackathon not found"}), 404
+    if not team:
+        return jsonify({"error": "Team not found"}), 404
+
+    # Check hackathon status
+    if hackathon.status != 'live':
+        return jsonify({"error": "Project submission is only allowed when hackathon is live"}), 400
+
+    # Check if team is part of the hackathon
+    if team.hackathon_id != hackathon.id:
+        return jsonify({"error": "Team is not part of this hackathon"}), 400
+
+    # Check if team has already submitted
+    existing_submission = ProjectSubmission.query.filter_by(
+        hackathon_id=hackathon.id,
+        team_code=team.team_code
+    ).first()
+    if existing_submission:
+        return jsonify({"error": "Project already submitted for this hackathon"}), 400
+
+    # Create new submission
+    submission = ProjectSubmission(
+        hackathon_id=hackathon.id,
+        team_code=team.team_code,
+        github_link=data['github_link'],
+        live_demo_link=data.get('live_demo_link')
+    )
+
+    try:
+        db.session.add(submission)
+        db.session.commit()
+        return jsonify({"message": "Project submitted successfully", "submission": submission.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

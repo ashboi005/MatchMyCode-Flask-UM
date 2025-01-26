@@ -59,3 +59,31 @@ class Hackathon(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+class ProjectSubmission(db.Model):
+    __tablename__ = 'project_submissions'
+                
+    id = db.Column(db.Integer, primary_key=True)
+    hackathon_id = db.Column(db.Integer, db.ForeignKey('hackathons.id'), nullable=False)
+    team_code = db.Column(db.String(8), db.ForeignKey('teams.team_code'), nullable=False)
+    github_link = db.Column(db.String(255), nullable=False)
+    live_demo_link = db.Column(db.String(255), nullable=True)  # Optional
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    hackathon = db.relationship('Hackathon', backref='submissions')
+    team = db.relationship('Team', backref='submissions')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'hackathon_id': self.hackathon_id,
+            'team_code': self.team_code,
+            'github_link': self.github_link,
+            'live_demo_link': self.live_demo_link,
+            'submitted_at': self.submitted_at.isoformat()
+        }
+
+    def is_submission_open(self):
+        """Check if submissions are allowed (hackathon is live)."""
+        return self.status == 'live'
