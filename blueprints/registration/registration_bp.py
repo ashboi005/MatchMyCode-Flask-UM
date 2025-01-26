@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 from config import db
 from datetime import datetime
 from flasgger import swag_from
-from sqlalchemy.orm.attributes import flag_modified  # New import
+from sqlalchemy.orm.attributes import flag_modified
 from blueprints.auth.models import User
 from blueprints.hackathon.models import Hackathon
 from .models import Team
@@ -47,7 +47,7 @@ def create_team():
     # Validate registration conditions
     if not hackathon:
         return jsonify({'error': 'Hackathon not found'}), 404
-    if hackathon.status in ['live', 'expired']:
+    if hackathon.status != 'approved':
         return jsonify({'error': 'Registration closed'}), 403
     if datetime.utcnow() > hackathon.registration_deadline:
         return jsonify({'error': 'Registration deadline passed'}), 403
@@ -75,7 +75,6 @@ def create_team():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
 
 @registration_bp.route('/join_team', methods=['POST'])
 @swag_from({
@@ -118,7 +117,7 @@ def join_team():
         return jsonify({'error': 'Team not part of this hackathon'}), 400
         
     # Check registration conditions
-    if hackathon.status in ['live', 'expired']:
+    if hackathon.status != 'approved':
         return jsonify({'error': 'Registration closed'}), 403
     if datetime.utcnow() > hackathon.registration_deadline:
         return jsonify({'error': 'Registration deadline passed'}), 403
@@ -146,7 +145,8 @@ def join_team():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@registration_bp.route('/announce_winner', methods=['POST'])  # Removed path parameter
+# Rest of the code remains unchanged
+@registration_bp.route('/announce_winner', methods=['POST'])
 @swag_from({
     'tags': ['Registration'],
     'summary': 'Announce hackathon winner',
@@ -159,9 +159,9 @@ def join_team():
             'properties': {
                 'clerkId': {'type': 'string'},
                 'winner_team_id': {'type': 'integer'},
-                'hackathon_id': {'type': 'integer'}  # Added to request body
+                'hackathon_id': {'type': 'integer'}
             },
-            'required': ['clerkId', 'winner_team_id', 'hackathon_id']  # Updated requirements
+            'required': ['clerkId', 'winner_team_id', 'hackathon_id']
         }
     }],
     'responses': {
@@ -173,7 +173,7 @@ def join_team():
 def announce_winner():
     data = request.get_json()
     user = User.query.get(data['clerkId'])
-    hackathon_id = data.get('hackathon_id')  # Get from request body
+    hackathon_id = data.get('hackathon_id')
     
     # Authorization check
     if not user or user.role != 'organiser':
@@ -186,7 +186,7 @@ def announce_winner():
         return jsonify({'error': 'Winner can only be announced for expired hackathons'}), 400
         
     team = Team.query.get(data['winner_team_id'])
-    if not team or team.hackathon_id != hackathon_id:  # Verify team belongs to hackathon
+    if not team or team.hackathon_id != hackathon_id:
         return jsonify({'error': 'Invalid winning team for this hackathon'}), 400
         
     try:
