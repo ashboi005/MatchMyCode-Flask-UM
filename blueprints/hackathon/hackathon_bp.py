@@ -2,11 +2,10 @@ from flask import Blueprint, request, jsonify
 from config import db
 from flasgger import swag_from
 from blueprints.auth.models import User
-from blueprints.hackathon.models import Hackathon, UserHackathonRegistration
+from blueprints.hackathon.models import Hackathon
 from datetime import datetime
 
 hackathon_bp = Blueprint('hackathon_bp', __name__, url_prefix='/hackathons')
-
 
 @hackathon_bp.route('/create_hackathon', methods=['POST'])
 @swag_from({
@@ -25,6 +24,7 @@ hackathon_bp = Blueprint('hackathon_bp', __name__, url_prefix='/hackathons')
                 'start_date': {'type': 'string', 'format': 'date-time'},
                 'end_date': {'type': 'string', 'format': 'date-time'},
                 'mode': {'type': 'string', 'enum': ['online', 'offline']},
+                'max_team_size': {'type': 'integer', 'minimum': 1, 'maximum': 6},
                 'address': {'type': 'string'},
                 'location': {'type': 'string'},
                 'tags': {'type': 'array', 'items': {'type': 'string'}},
@@ -43,7 +43,8 @@ hackathon_bp = Blueprint('hackathon_bp', __name__, url_prefix='/hackathons')
                 'start_date', 
                 'end_date',
                 'mode',
-                'registration_deadline'
+                'registration_deadline',
+                'max_team_size'
             ]
         }
     }],
@@ -56,6 +57,10 @@ hackathon_bp = Blueprint('hackathon_bp', __name__, url_prefix='/hackathons')
 def create_hackathon():
     data = request.get_json()
     try:
+        max_team_size = data['max_team_size']
+        if not (1 <= max_team_size <= 6):
+            return jsonify({"error": "max_team_size must be between 1 and 6"}), 400
+
         organiser = User.query.get(data['organiser_clerkId'])
         if not organiser or organiser.role != 'organiser':
             return jsonify({"error": "Unauthorized"}), 403
@@ -67,6 +72,7 @@ def create_hackathon():
             start_date=datetime.fromisoformat(data['start_date']),
             end_date=datetime.fromisoformat(data['end_date']),
             mode=data['mode'],
+            max_team_size=max_team_size,
             address=data.get('address'),
             location=data.get('location'),
             tags=data.get('tags', []),
@@ -119,6 +125,7 @@ def create_hackathon():
                     'title': {'type': 'string'},
                     'description': {'type': 'string'},
                     'mode': {'type': 'string', 'enum': ['online', 'offline']},
+                    'max_team_size': {'type': 'integer', 'minimum': 1, 'maximum': 6},
                     'address': {'type': 'string'},
                     'tags': {'type': 'array', 'items': {'type': 'string'}},
                     'category': {'type': 'string'},
@@ -146,9 +153,14 @@ def update_hackathon(hackathon_id):
         return jsonify({"error": "Unauthorized"}), 403
     
     updatable_fields = [
-        'title', 'description', 'mode', 'address', 'tags', 
+        'title', 'description', 'mode', 'max_team_size', 'address', 'tags',
         'category', 'prize_money', 'themes', 'rules', 'additional_info'
     ]
+    
+    if 'max_team_size' in data:
+        new_size = data['max_team_size']
+        if not (1 <= new_size <= 6):
+            return jsonify({"error": "max_team_size must be between 1 and 6"}), 400
     
     for field in updatable_fields:
         if field in data:
@@ -157,6 +169,7 @@ def update_hackathon(hackathon_id):
     if 'winners' in data and hackathon.status == 'expired':
         hackathon.winners = data['winners']
     
+    hackathon.updated_at = datetime.utcnow()
     db.session.commit()
     return jsonify(hackathon.to_dict()), 200
 
@@ -210,57 +223,21 @@ def get_public_hackathons():
     ).all()
     return jsonify([h.to_dict() for h in hackathons]), 200
 
-@hackathon_bp.route('/<int:hackathon_id>/register_for_hackathon', methods=['POST'])
+@hackathon_bp.route('/<int:hackathon_id>', methods=['GET'])
 @swag_from({
     'tags': ['Hackathon'],
-    'summary': 'Register for a hackathon',
-    'parameters': [
-        {
-            'name': 'hackathon_id',
-            'in': 'path',
-            'type': 'integer',
-            'required': True,
-            'description': 'ID of the hackathon to register for'
-        },
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'user_clerkId': {'type': 'string'}
-                },
-                'required': ['user_clerkId']
-            }
-        }
-    ],
+    'summary': 'Get hackathon details',
+    'parameters': [{
+        'name': 'hackathon_id',
+        'in': 'path',
+        'type': 'integer',
+        'required': True
+    }],
     'responses': {
-        201: {'description': 'Registration successful'},
-        400: {'description': 'Registration closed or already registered'},
+        200: {'description': 'Hackathon details', 'schema': {'$ref': '#/definitions/Hackathon'}},
         404: {'description': 'Hackathon not found'}
     }
 })
-def register_for_hackathon(hackathon_id):
-    data = request.get_json()
+def get_hackathon(hackathon_id):
     hackathon = Hackathon.query.get_or_404(hackathon_id)
-    
-    if datetime.utcnow() > hackathon.registration_deadline:
-        return jsonify({"error": "Registration closed"}), 400
-    
-    existing = UserHackathonRegistration.query.filter_by(
-        user_clerkId=data['user_clerkId'],
-        hackathon_id=hackathon_id
-    ).first()
-    
-    if existing:
-        return jsonify({"error": "Already registered"}), 400
-    
-    registration = UserHackathonRegistration(
-        user_clerkId=data['user_clerkId'],
-        hackathon_id=hackathon_id
-    )
-    
-    db.session.add(registration)
-    db.session.commit()
-    return jsonify({"message": "Registration successful"}), 201
+    return jsonify(hackathon.to_dict()), 200

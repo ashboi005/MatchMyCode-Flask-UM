@@ -18,6 +18,7 @@ from blueprints.projects.projects_bp import projects_bp
 from blueprints.hackathon.hackathon_bp import hackathon_bp
 from blueprints.feed.feed_bp import feed_bp
 from blueprints.hackathon.models import Hackathon
+from blueprints.registration.registration_bp import registration_bp
 
 
 # Initialize Flask app
@@ -75,6 +76,7 @@ app.register_blueprint(organiser_bp, url_prefix='/organisers')
 app.register_blueprint(projects_bp, url_prefix='/projects')
 app.register_blueprint(hackathon_bp, url_prefix='/hackathon')
 app.register_blueprint(feed_bp, url_prefix='/feed')
+app.register_blueprint(registration_bp, url_prefix='/registration')
 
 # Initialize database and scheduler
 with app.app_context():
@@ -84,7 +86,7 @@ with app.app_context():
         id='hackathon_status_updater',
         func=update_hackathon_statuses,
         trigger='interval',
-        minutes=15
+        minutes=1
     )
     scheduler.init_app(app)
     scheduler.start()
