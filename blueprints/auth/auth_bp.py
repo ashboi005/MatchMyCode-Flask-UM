@@ -3,8 +3,7 @@ from config import db
 from blueprints.auth.models import User
 from flasgger import swag_from
 from blueprints.hackathon.models import Hackathon
-
-
+from blueprints.chat.models import Chat
 
 
 auth_bp = Blueprint('auth_bp', __name__)
@@ -198,5 +197,120 @@ def approve_hackathon(hackathon_id):
         return jsonify({"error": str(e)}), 500
 
 
+# Create Open Group (Admin only)
+@auth_bp.route('/create-open-group', methods=['POST'])
+@swag_from({
+    'tags': ['Auth'],
+    'summary': 'Create a new open group (Admin only)',
+    'parameters': [{
+        'name': 'body',
+        'in': 'body',
+        'required': True,
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'clerkId': {'type': 'string'},
+                'topic': {'type': 'string'},
+                'description': {'type': 'string'}
+            },
+            'required': ['clerkId', 'topic']
+        }
+    }],
+    'responses': {
+        201: {'description': 'Group created'},
+        403: {'description': 'Admin privileges required'},
+        409: {'description': 'Group already exists'}
+    }
+})
+def create_open_group():
+    data = request.json
+    admin = User.query.filter_by(clerkId=data['clerkId'], role='admin').first()
+    if not admin:
+        return jsonify({"error": "Admin privileges required"}), 403
+    
+    topic_slug = data['topic'].lower().replace(' ', '-')
+    room_id = f"open-{topic_slug}"
+    
+    if Chat.query.filter_by(room_id=room_id).first():
+        return jsonify({"error": "Group already exists"}), 409
+    
+    new_group = Chat(
+        room_id=room_id,
+        is_group=True,
+        is_open_group=True,
+        topic=data['topic'],
+        description=data.get('description'),
+        created_by=data['clerkId'],
+        participants=[]
+    )
+    db.session.add(new_group)
+    db.session.commit()
+    
+    return jsonify({
+        "room_id": room_id,
+        "topic": data['topic'],
+        "description": data.get('description')
+    }), 201
 
+# Get All Open Groups
+@auth_bp.route('/open-groups', methods=['GET'])
+@swag_from({
+    'tags': ['Auth'],
+    'summary': 'Get list of all open groups',
+    'responses': {
+        200: {
+            'description': 'List of open groups',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'room_id': {'type': 'string'},
+                        'topic': {'type': 'string'},
+                        'description': {'type': 'string'},
+                        'participant_count': {'type': 'integer'}
+                    }
+                }
+            }
+        }
+    }
+})
+def get_open_groups():
+    groups = Chat.query.filter_by(is_open_group=True).all()
+    return jsonify([{
+        'room_id': g.room_id,
+        'topic': g.topic,
+        'description': g.description,
+        'participant_count': len(g.participants),
+        'participants': g.participants
+    } for g in groups])
+
+# Get Group Details
+@auth_bp.route('/open-group/<topic_slug>', methods=['GET'])
+@swag_from({
+    'tags': ['Auth'],
+    'summary': 'Get open group details by topic slug',
+    'parameters': [{
+        'name': 'topic_slug',
+        'in': 'path',
+        'type': 'string',
+        'required': True
+    }],
+    'responses': {
+        200: {'description': 'Group details'},
+        404: {'description': 'Group not found'}
+    }
+})
+def get_open_group_details(topic_slug):
+    group = Chat.query.filter_by(room_id=f"open-{topic_slug}").first()
+    if not group:
+        return jsonify({"error": "Group not found"}), 404
+    
+    return jsonify({
+        'room_id': group.room_id,
+        'topic': group.topic,
+        'description': group.description,
+        'participants': group.participants,
+        'created_at': group.created_at.isoformat()
+    })
 

@@ -17,14 +17,33 @@ from blueprints.organiser.organiser_bp import organiser_bp
 from blueprints.projects.projects_bp import projects_bp
 from blueprints.hackathon.hackathon_bp import hackathon_bp
 from blueprints.feed.feed_bp import feed_bp
+from blueprints.chat.chat_bp import chat_bp
+from blueprints.follow.follow_bp import follow_bp
 from blueprints.hackathon.models import Hackathon
 
 
 # Initialize Flask app
 app = Flask(__name__)
 configure_app(app)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {
+    "origins": "*",
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "ngrok-skip-browser-warning"]}},
+    supports_credentials=True
+    )
 swagger = Swagger(app)
+
+# Register blueprints
+app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(user_bp, url_prefix='/user')
+app.register_blueprint(mentors_bp, url_prefix='/mentor')
+app.register_blueprint(reviews_bp, url_prefix='/reviews')
+app.register_blueprint(organiser_bp, url_prefix='/organisers')
+app.register_blueprint(projects_bp, url_prefix='/projects')
+app.register_blueprint(hackathon_bp, url_prefix='/hackathon')
+app.register_blueprint(follow_bp, url_prefix='/follow')
+app.register_blueprint(feed_bp, url_prefix='/feed')
+app.register_blueprint(chat_bp, url_prefix='/chat')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -66,15 +85,6 @@ def update_hackathon_statuses():
             db.session.rollback()
             logger.error(f"Status update failed: {str(e)}", exc_info=True)
 
-# Register blueprints
-app.register_blueprint(auth_bp, url_prefix='/auth')
-app.register_blueprint(user_bp, url_prefix='/user')
-app.register_blueprint(mentors_bp, url_prefix='/mentor')
-app.register_blueprint(reviews_bp, url_prefix='/reviews')
-app.register_blueprint(organiser_bp, url_prefix='/organisers')
-app.register_blueprint(projects_bp, url_prefix='/projects')
-app.register_blueprint(hackathon_bp, url_prefix='/hackathon')
-app.register_blueprint(feed_bp, url_prefix='/feed')
 
 # Initialize database and scheduler
 with app.app_context():
