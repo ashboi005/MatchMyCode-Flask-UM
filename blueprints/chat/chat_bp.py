@@ -215,6 +215,73 @@ def send_message():
     return jsonify({"status": "sent"}), 200
 
 # Join Open Group (Modified)
+
+@swag_from({
+    'tags': ['Chat'],
+    'summary': 'Join an open group',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'user_id': {
+                        'type': 'string',
+                        'example': 'user_123'
+                    },
+                    'topic_slug': {
+                        'type': 'string',
+                        'example': 'web-development'
+                    }
+                },
+                'required': ['user_id', 'topic_slug']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Successfully joined group',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'room_id': {'type': 'string'},
+                    'topic': {'type': 'string'},
+                    'participant_count': {'type': 'integer'},
+                    'participants': {'type': 'array', 'items': {'type': 'string'}}
+                }
+            }
+        },
+        400: {
+            'description': 'Invalid request',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        },
+        404: {
+            'description': 'Group not found',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        },
+        500: {
+            'description': 'Internal server error',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        }
+    }
+})
 @chat_bp.route('/join-open-group', methods=['POST'])
 def join_open_group():
     data = request.json
@@ -555,3 +622,77 @@ def project_chat_kick():
         "status": "removed",
         "participants": chat.participants  # Return updated list for debugging
     }), 200
+
+@swag_from({
+    'tags': ['Chat'],
+    'summary': 'Get all chats for a user',
+    'parameters': [
+        {
+            'name': 'clerkId',
+            'in': 'query',
+            'type': 'string',
+            'required': True,
+            'description': 'User Clerk ID'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'List of chats',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'room_id': {'type': 'string'},
+                        'is_group': {'type': 'boolean'},
+                        'is_project_chat': {'type': 'boolean'},
+                        'participants': {'type': 'array', 'items': {'type': 'string'}},
+                        'created_at': {'type': 'string'}
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Missing clerkId',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string', 'example': 'clerkId is required'}
+                }
+            }
+        }
+    }
+})
+@chat_bp.route('/user-chats', methods=['GET'])
+def get_user_chats():
+    clerkId = request.args.get('clerkId')
+    if not clerkId:
+        return jsonify({"error": "clerkId is required"}), 400
+    
+    # Query all chats where the user is a participant
+    chats = Chat.query.filter(Chat.participants.contains([clerkId])).all()
+    
+    # Format the response
+    chat_list = []
+    for chat in chats:
+        chat_data = {
+            'room_id': chat.room_id,
+            'is_group': chat.is_group,
+            'is_project_chat': chat.room_id.startswith('project-'),
+            'participants': chat.participants,
+            'created_at': chat.created_at.isoformat()
+        }
+        
+        # Add project details for project chats
+        if chat.room_id.startswith('project-'):
+            project = Project.query.filter_by(chat_room_id=chat.room_id).first()
+            if project:
+                chat_data['project'] = {
+                    'id': project.id,
+                    'name': project.name,
+                    'title': project.title
+                }
+        
+        chat_list.append(chat_data)
+        
+        return jsonify(chat_list), 200
