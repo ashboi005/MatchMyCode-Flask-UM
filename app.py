@@ -20,6 +20,7 @@ from blueprints.feed.feed_bp import feed_bp
 from blueprints.chat.chat_bp import chat_bp
 from blueprints.follow.follow_bp import follow_bp
 from blueprints.hackathon.models import Hackathon
+from blueprints.registration.registration_bp import registration_bp
 
 
 # Initialize Flask app
@@ -85,6 +86,16 @@ def update_hackathon_statuses():
             db.session.rollback()
             logger.error(f"Status update failed: {str(e)}", exc_info=True)
 
+# Register blueprints
+app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(user_bp, url_prefix='/user')
+app.register_blueprint(mentors_bp, url_prefix='/mentor')
+app.register_blueprint(reviews_bp, url_prefix='/reviews')
+app.register_blueprint(organiser_bp, url_prefix='/organisers')
+app.register_blueprint(projects_bp, url_prefix='/projects')
+app.register_blueprint(hackathon_bp, url_prefix='/hackathon')
+app.register_blueprint(feed_bp, url_prefix='/feed')
+app.register_blueprint(registration_bp, url_prefix='/registration')
 
 # Initialize database and scheduler
 with app.app_context():
@@ -94,7 +105,7 @@ with app.app_context():
         id='hackathon_status_updater',
         func=update_hackathon_statuses,
         trigger='interval',
-        minutes=15
+        minutes=1
     )
     scheduler.init_app(app)
     scheduler.start()
